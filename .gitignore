@@ -1,0 +1,6 @@
+.env
+dist/
+Examples/
+package-lock.json
+baxley-status-api/installer/staging/
+baxley-status-api/config/topics.json

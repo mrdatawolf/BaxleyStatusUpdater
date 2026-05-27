@@ -1,0 +1,4 @@
+node_modules/
+.vite/
+out/
+# user settings are stored in OS app-data, not here

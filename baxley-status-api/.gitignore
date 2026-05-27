@@ -1,0 +1,6 @@
+node_modules/
+.env
+# generated topic UIDs — copy topics.json to each client manually
+config/topics.json
+# local history DB (auto-created at runtime)
+data/
