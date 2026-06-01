@@ -1,62 +1,220 @@
+/* ============================================================
+   LIQUID GLASS — ported VERBATIM from docs/glass-reference.html.
+   The window is truly transparent (frame:false, transparent:true,
+   Win11 backgroundMaterial:'acrylic'); body / #root have NO opaque
+   background so the OS acrylic blur shows through the panel.
+   ============================================================ */
+
+:root {
+  --accent-green: #5de2a0;  --accent-green-soft: rgba(93,226,160,0.14);  --accent-green-bd: rgba(93,226,160,0.45);
+  --accent-amber: #f5c14b;  --accent-amber-soft: rgba(245,193,75,0.14);  --accent-amber-bd: rgba(245,193,75,0.45);
+  --accent-red:   #ff6b6b;  --accent-red-soft:   rgba(255,107,107,0.14); --accent-red-bd:   rgba(255,107,107,0.45);
+
+  --glass-card:   rgba(255,255,255,0.08);
+  --glass-border: rgba(255,255,255,0.14);
+  --text-strong:  rgba(255,255,255,0.95);
+  --text-mid:     rgba(255,255,255,0.82);
+  --text-faint:   rgba(255,255,255,0.62);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #141414;
-  color: #e0e0e0;
-  user-select: none;
-  -webkit-app-region: drag; /* allow window drag from any non-interactive area */
+html, body, #root {
+  height: 100%;
 }
 
-button, input, a, .ant-btn, .ant-tabs-tab, .ant-switch {
+body {
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  /* Fully transparent — the OS acrylic / vibrancy blur is the backdrop. */
+  background: transparent;
+  color: var(--text-strong);
+  user-select: none;
+  overflow: hidden;
+}
+
+#root {
+  background: transparent;
+}
+
+button, input, a, .ant-btn, .ant-tabs-tab, .ant-switch, .ant-input, .ant-input-number {
   -webkit-app-region: no-drag;
 }
 
-/* Status light pulse animation */
-@keyframes pulse-green  { 0%, 100% { box-shadow: 0 0 0 0 rgba(82, 196, 26, 0.5);  } 50% { box-shadow: 0 0 0 8px rgba(82, 196, 26, 0);  } }
-@keyframes pulse-yellow { 0%, 100% { box-shadow: 0 0 0 0 rgba(250, 173, 20, 0.5); } 50% { box-shadow: 0 0 0 8px rgba(250, 173, 20, 0); } }
-@keyframes pulse-red    { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.5);  } 50% { box-shadow: 0 0 0 8px rgba(255, 77, 79, 0);  } }
+/* ─── THE PANEL — frameless, frosted, rounded (fills the window) ──────────── */
 
-.status-dot {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
-}
-
-.status-dot.green  { background: #52c41a; animation: pulse-green  2.5s infinite; }
-.status-dot.yellow { background: #faad14; animation: pulse-yellow 2.0s infinite; }
-.status-dot.red    { background: #ff4d4f; animation: pulse-red    1.5s infinite; }
-.status-dot.grey   { background: #595959; }
-.status-dot.black  { background: #2a2a2a; }
-
-.app-header {
-  background: #1f1f1f;
-  padding: 10px 16px;
+.panel {
+  position: relative;
+  width: 100%;
+  height: 100vh;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  border-bottom: 1px solid #2a2a2a;
+  flex-direction: column;
+  border-radius: 24px;
+  overflow: hidden;
+  background: rgba(24,26,32,0.82);
+  backdrop-filter: blur(38px) saturate(150%);
+  -webkit-backdrop-filter: blur(38px) saturate(150%);
+  border: 1px solid rgba(255,255,255,0.16);
+  /* Inset highlight only. A large OUTER drop-shadow (0 24px 60px ...) on a panel
+     that fills 100% of the window has nowhere to render except the corner gaps
+     outside the 24px radius — that faint dark bleed was the "grey rectangle" in
+     the corners. The OS drop shadow is disabled (hasShadow:false) so we don't
+     need a CSS outer shadow; the inset highlight keeps the frosted edge sheen. */
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.20);
   -webkit-app-region: drag;
 }
 
-.app-header h1 {
-  font-size: 13px;
-  font-weight: 600;
-  color: #bfbfbf;
-  letter-spacing: 0.4px;
+/* The scrollable body of the panel (everything below the header). */
+.panel-scroll {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 4px;
 }
 
-.app-content {
-  padding: 0;
+/* status glow — the ONLY large use of the status color (subtle, top only) */
+.tint { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.tint.green { background: radial-gradient(120% 80% at 50% -10%, rgba(93,226,160,0.28), rgba(93,226,160,0) 60%); }
+.tint.amber { background: radial-gradient(120% 80% at 50% -10%, rgba(245,193,75,0.28), rgba(245,193,75,0) 60%); }
+.tint.red   { background: radial-gradient(120% 80% at 50% -10%, rgba(255,107,107,0.26), rgba(255,107,107,0) 60%); }
+
+/* ─── Header ──────────────────────────────────────────────────────────────── */
+
+.head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
 }
+.brand { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text-strong); }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot.green { background: var(--accent-green); box-shadow: 0 0 8px rgba(93,226,160,0.9); }
+.dot.amber { background: var(--accent-amber); box-shadow: 0 0 8px rgba(245,193,75,0.9); }
+.dot.red   { background: var(--accent-red);   box-shadow: 0 0 8px rgba(255,107,107,0.9); }
+.dot.neutral { background: rgba(255,255,255,0.45); }
+.gear {
+  font-size: 16px;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  transition: color 0.15s;
+}
+.gear:hover { color: var(--text-strong); }
+
+/* ─── Hero ────────────────────────────────────────────────────────────────── */
+
+.hero { position: relative; display: flex; flex-direction: column; align-items: center; padding: 6px 18px 18px; }
+.ring {
+  width: 92px; height: 92px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+}
+.ring.green { background: var(--accent-green-soft); border-color: var(--accent-green-bd); box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 0 22px rgba(93,226,160,0.35); }
+.ring.amber { background: var(--accent-amber-soft); border-color: var(--accent-amber-bd); box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 0 22px rgba(245,193,75,0.32); }
+.ring.red   { background: var(--accent-red-soft);   border-color: var(--accent-red-bd);   box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 0 22px rgba(255,107,107,0.30); }
+.ring.neutral { background: rgba(255,255,255,0.06); border-color: var(--glass-border); }
+.glyph { font-size: 38px; font-weight: 300; line-height: 1; display: flex; align-items: center; justify-content: center; }
+.glyph.green { color: #7defb6; }
+.glyph.amber { color: #ffd778; }
+.glyph.red   { color: #ff8f8f; }
+.glyph.neutral { color: var(--text-mid); }
+.htitle { margin-top: 14px; font-size: 21px; font-weight: 500; color: var(--text-strong); }
+.hsub { margin-top: 2px; font-size: 12px; color: var(--text-faint); }
+
+/* ─── Cards ───────────────────────────────────────────────────────────────── */
+
+.card {
+  position: relative;
+  margin: 0 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--glass-card);
+  border: 1px solid var(--glass-border);
+}
+.card + .card { margin-top: 10px; }
+
+.banner {
+  position: relative;
+  margin: 0 14px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--accent-red-soft);
+  border: 1px solid var(--accent-red-bd);
+}
+.banner.amber { background: var(--accent-amber-soft); border-color: var(--accent-amber-bd); }
+.banner .bt { font-size: 13px; font-weight: 500; color: #ffb0b0; }
+.banner.amber .bt { color: #ffd778; }
+.banner .bs { font-size: 11.5px; color: var(--text-mid); }
+
+/* ─── Rows ────────────────────────────────────────────────────────────────── */
+
+.row { display: flex; gap: 10px; align-items: flex-start; }
+.ico { font-size: 16px; color: var(--text-faint); margin-top: 1px; display: flex; }
+.lbl { font-size: 11px; color: var(--text-faint); }
+.val { font-size: 13px; font-weight: 500; color: var(--text-strong); margin-top: 3px; }
+.body { font-size: 12.5px; line-height: 1.5; color: var(--text-mid); }
+
+/* ─── Stages ──────────────────────────────────────────────────────────────── */
+
+.stages { position: relative; display: flex; gap: 7px; padding: 14px; }
+.chip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 4px;
+  border-radius: 11px;
+  font-size: 10.5px;
+  color: var(--text-strong);
+}
+.chip.ok   { background: var(--accent-green-soft); border: 1px solid var(--accent-green-bd); }
+.chip.fail { background: var(--accent-red-soft);   border: 1px solid var(--accent-red-bd); }
+.chip.fail-amber { background: var(--accent-amber-soft); border: 1px solid var(--accent-amber-bd); }
+.chip.idle { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-faint); }
+
+/* ─── Meta (two cards side by side) ───────────────────────────────────────── */
+
+.meta { display: flex; gap: 10px; margin: 10px 14px 0; }
+.meta .card { flex: 1; margin: 0; }
+
+/* ─── Section label ───────────────────────────────────────────────────────── */
+
+.section-lbl {
+  font-size: 10px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 4px 18px 0;
+}
+
+/* ─── Settings view (kept on the same frosted panel) ──────────────────────── */
+
+.settings-body { padding: 4px 14px 14px; }
+.settings-body .section-head {
+  font-size: 10px; color: var(--text-faint); text-transform: uppercase;
+  letter-spacing: 1px; margin-bottom: 8px;
+}
+.settings-hint { font-size: 12px; color: var(--text-mid); margin-bottom: 8px; line-height: 1.5; }
+/* Tighten the manual-config fields so the full menu fits without scrolling. */
+.settings-body .ant-form-item { margin-bottom: 10px; }
+.settings-body .ant-form-item .ant-form-item-label { padding-bottom: 2px; }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #1a1a1a; }
-::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 3px; }
