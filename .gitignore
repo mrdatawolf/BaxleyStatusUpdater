@@ -4,3 +4,8 @@ Examples/
 package-lock.json
 baxley-status-api/installer/staging/
 baxley-status-api/config/topics.json
+
+# Claude Code reference files (local only — not committed)
+CLAUDE.md
+.claude/
+docs/

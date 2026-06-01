@@ -8,6 +8,10 @@ import { icons } from './icons';
 // Handle Squirrel.Windows install/update/uninstall events — must quit immediately.
 if (squirrelStartup) app.quit();
 
+// Kill the default application menu (File/Edit/View/Window/Help) for a chrome-free
+// tray popover. Must be called before any window is created.
+Menu.setApplicationMenu(null);
+
 // ─── Settings persistence ─────────────────────────────────────────────────────
 
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
@@ -170,25 +174,57 @@ function updateTray(status) {
   if (!tray) return;
   tray.setImage(icons[status] || icons.grey);
   tray.setToolTip(`Baxley Pipeline — ${statusLabel(status)}`);
-  tray.setContextMenu(buildContextMenu(status));
+  // Context menu is popped up manually on right-click (see tray 'right-click'
+  // handler) so that LEFT click is reserved for the popover toggle.
 }
 
 // ─── Main window ──────────────────────────────────────────────────────────────
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 420,
-    height: 480,
+  // Base options shared across platforms.
+  const opts = {
+    width: 340,
+    height: 560,
     resizable: false,
     skipTaskbar: true,
     show: false,
-    titleBarStyle: 'hiddenInset',
+    frame: false,            // frameless — no OS title bar / chrome
+    transparent: true,       // per-pixel transparency — only the CSS .panel paints
+    backgroundColor: '#00000000', // fully transparent base (no opaque window fill)
+    roundedCorners: true,    // honored on macOS; Win11 rounds frameless windows automatically
+    // hasShadow MUST be false on a transparent frameless window: on Windows the DWM
+    // shadow is drawn around the window's full RECTANGLE (it ignores the CSS
+    // border-radius), which shows up as the grey rectangle behind the rounded panel.
+    hasShadow: false,
+    thickFrame: false,       // no native resize/frame surface that could paint a rect
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
     },
-  });
+  };
+
+  if (process.platform === 'darwin') {
+    // macOS native vibrancy. macOS clips vibrancy to the window's rounded shape,
+    // so no rectangular backdrop leaks out behind the corners.
+    opts.vibrancy = 'under-window';
+    opts.visualEffectState = 'active';
+  } else if (process.platform === 'win32') {
+    // Windows (10 & 11): stay per-pixel transparent (transparent:true above) so
+    // the CSS-rounded .panel defines the real visible shape. We deliberately do
+    // NOT set backgroundMaterial:'acrylic' or any opaque backgroundColor — both
+    // fill the full window *rectangle*, which shows as a grey rectangle behind
+    // the panel's rounded corners. On Win10 there is no OS blur, so the .panel's
+    // own rgba(24,26,32,0.82) frosted fill is the legible surface (CSS only —
+    // never a window/body fill).
+  } else {
+    // Linux / other: stay transparent too. An opaque window backgroundColor
+    // ('#141414') was the grey rectangle here — the .panel's CSS rgba fill is
+    // the only surface. Compositing-less WMs degrade to the panel rgba, which is
+    // still acceptable; no window-level opaque rectangle is ever drawn.
+  }
+
+  mainWindow = new BrowserWindow(opts);
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
@@ -258,12 +294,21 @@ app.whenReady().then(() => {
   tray = new Tray(icons.grey);
   updateTray('grey');
 
+  // LEFT click toggles the popover near the tray icon.
   tray.on('click', () => {
     if (mainWindow && mainWindow.isVisible()) {
       mainWindow.hide();
     } else {
       showWindow();
     }
+  });
+
+  // RIGHT click shows the show/quit context menu.
+  tray.on('right-click', () => {
+    const label = currentConnectionState === 'live' && currentStatus
+      ? currentStatus.status
+      : currentConnectionState;
+    tray.popUpContextMenu(buildContextMenu(label));
   });
 
   startStalenessCheck();

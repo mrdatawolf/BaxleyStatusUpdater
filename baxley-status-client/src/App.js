@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { ConfigProvider, theme } from 'antd';
+import { SettingOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import StatusPanel from './components/StatusPanel';
 import Settings from './components/Settings';
 import { useStatusStore, useSettingsStore } from './store';
+
+// Map live status + connection state → the visual accent used for the
+// panel tint and the header dot. grey/black connection states are neutral
+// (no status color), per the reference's frosted-glass treatment.
+export function resolveAccent(connectionState, status) {
+  if (connectionState === 'black' || connectionState === 'grey') return 'neutral';
+  if (status === 'green') return 'green';
+  if (status === 'yellow') return 'amber';
+  if (status === 'red') return 'red';
+  return 'neutral';
+}
 
 export default function App() {
   const [view, setView] = useState('status'); // 'status' | 'settings'
@@ -12,12 +24,7 @@ export default function App() {
   const connectionState = useStatusStore((s) => s.connectionState);
   const status = useStatusStore((s) => s.status);
 
-  const headerDotColor =
-    connectionState === 'black' ? '#3a3a3a' :
-    connectionState === 'grey'  ? '#595959' :
-    status === 'green'  ? '#52c41a' :
-    status === 'yellow' ? '#faad14' :
-    status === 'red'    ? '#ff4d4f' : '#595959';
+  const accent = resolveAccent(connectionState, status);
 
   // Load initial state from main process
   useEffect(() => {
@@ -41,38 +48,37 @@ export default function App() {
       theme={{
         algorithm: theme.darkAlgorithm,
         token: {
-          colorPrimary: '#52c41a',
-          borderRadius: 6,
-          colorBgContainer: '#1f1f1f',
-          colorBgElevated: '#262626',
+          colorPrimary: '#5de2a0',
+          borderRadius: 11,
+          // Fully transparent antd surfaces so nothing paints an opaque box
+          // over the frosted panel.
+          colorBgContainer: 'rgba(255,255,255,0.07)',
+          colorBgElevated: 'rgba(40,40,46,0.92)',
+          colorBgBase: 'transparent',
         },
       }}
     >
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#141414' }}>
-        <header className="app-header">
-          <div style={{
-            width: 8, height: 8, borderRadius: '50%',
-            background: headerDotColor, flexShrink: 0,
-            transition: 'background 0.4s',
-          }} />
-          <span style={{ fontSize: 14, fontWeight: 700, color: '#e0e0e0', flex: 1 }}>
-            Baxley Pipeline Monitor
-          </span>
+      <div className="panel">
+        <div className={`tint ${accent}`} />
+
+        <div className="head">
+          <div className="brand">
+            <span className={`dot ${accent}`} />
+            Baxley
+          </div>
           <button
+            className="gear"
             onClick={() => setView(view === 'status' ? 'settings' : 'status')}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: '#8c8c8c', fontSize: 18, padding: '0 4px',
-              '-webkit-app-region': 'no-drag',
-            }}
             title={view === 'status' ? 'Settings' : 'Back'}
           >
-            {view === 'status' ? '⚙' : '←'}
+            {view === 'status' ? <SettingOutlined /> : <ArrowLeftOutlined />}
           </button>
-        </header>
+        </div>
 
-        <div className="app-content" style={{ flex: 1, overflow: 'auto' }}>
-          {view === 'status' ? <StatusPanel /> : <Settings onSaved={() => setView('status')} />}
+        <div className="panel-scroll">
+          {view === 'status'
+            ? <StatusPanel />
+            : <Settings onSaved={() => setView('status')} />}
         </div>
       </div>
     </ConfigProvider>

@@ -55,27 +55,30 @@ export default function Settings({ onSaved }) {
     }
   }
 
-  const labelStyle = { color: '#8c8c8c', fontSize: 12 };
+  const labelStyle = { color: 'rgba(255,255,255,0.78)', fontSize: 12 };
   const sectionHeader = (text) => (
-    <div style={{ fontSize: 10, color: '#595959', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-      {text}
-    </div>
+    <div className="section-head">{text}</div>
   );
 
+  const inputStyle = {
+    background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.92)',
+    borderColor: 'rgba(255,255,255,0.15)',
+  };
+
   return (
-    <div style={{ padding: '16px 20px', overflowY: 'auto', height: '100%' }}>
+    <div className="settings-body">
 
       {/* ── Share code ── */}
       {sectionHeader('Quick setup')}
-      <div style={{ marginBottom: 4, fontSize: 12, color: '#8c8c8c' }}>
+      <div className="settings-hint">
         Paste the share code from the API server's startup log to auto-fill all settings.
       </div>
-      <Space.Compact style={{ width: '100%', marginBottom: 20 }}>
+      <Space.Compact style={{ width: '100%', marginBottom: 12 }}>
         <Input
           value={shareCode}
           onChange={(e) => setShareCode(e.target.value)}
           placeholder="Paste share code here…"
-          style={{ background: '#1a1a1a', color: '#d9d9d9', borderColor: '#3a3a3a' }}
+          style={inputStyle}
         />
         <Button
           type="primary"
@@ -87,7 +90,7 @@ export default function Settings({ onSaved }) {
         </Button>
       </Space.Compact>
 
-      <Divider style={{ borderColor: '#2a2a2a', margin: '0 0 16px' }} />
+      <Divider style={{ borderColor: 'rgba(255,255,255,0.10)', margin: '0 0 10px' }} />
 
       {/* ── Manual fields ── */}
       {sectionHeader('Manual configuration')}
@@ -105,7 +108,7 @@ export default function Settings({ onSaved }) {
         >
           <Input
             placeholder="192.168.1.100"
-            style={{ background: '#1a1a1a', color: '#d9d9d9', borderColor: '#3a3a3a' }}
+            style={inputStyle}
           />
         </Form.Item>
 
@@ -115,7 +118,7 @@ export default function Settings({ onSaved }) {
           rules={[{ required: true }]}
         >
           <InputNumber
-            min={1} max={65535} style={{ width: '100%', background: '#1a1a1a', borderColor: '#3a3a3a' }}
+            min={1} max={65535} style={{ width: '100%', ...inputStyle }}
           />
         </Form.Item>
 
@@ -126,7 +129,7 @@ export default function Settings({ onSaved }) {
         >
           <Input
             placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-            style={{ background: '#1a1a1a', color: '#d9d9d9', borderColor: '#3a3a3a', fontFamily: 'monospace', fontSize: 11 }}
+            style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 11 }}
           />
         </Form.Item>
 
@@ -137,7 +140,7 @@ export default function Settings({ onSaved }) {
         >
           <Input
             placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-            style={{ background: '#1a1a1a', color: '#d9d9d9', borderColor: '#3a3a3a', fontFamily: 'monospace', fontSize: 11 }}
+            style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 11 }}
           />
         </Form.Item>
 
@@ -154,9 +157,9 @@ export default function Settings({ onSaved }) {
         </Form.Item>
       </Form>
 
-      <Divider style={{ borderColor: '#2a2a2a', margin: '16px 0 10px' }} />
+      <Divider style={{ borderColor: 'rgba(255,255,255,0.10)', margin: '10px 0 8px' }} />
 
-      <Text style={{ fontSize: 10, color: '#434343' }}>
+      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.50)' }}>
         Topic IDs are UUIDs — they reveal nothing to anyone monitoring the broker.
         Keep your share code private.
       </Text>
