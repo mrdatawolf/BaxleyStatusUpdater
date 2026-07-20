@@ -15,6 +15,34 @@ function msToHours(ms) {
   return ms / 3_600_000;
 }
 
+// Green Tally doesn't run on Saturday or Sunday, and Monday's data isn't
+// loaded into the DB until Tuesday's run — so none of that span should
+// count toward staleness. Sun=0, Mon=1, Sat=6 per Date#getDay().
+function isGraceDay(date) {
+  const day = date.getDay();
+  return day === 0 || day === 1 || day === 6;
+}
+
+/**
+ * Hours elapsed between `from` and `to`, excluding any time that falls on
+ * a grace day (Sat/Sun/Mon). Equivalent to a straight hour difference for
+ * spans that never touch a grace day, so normal weekday-to-weekday
+ * staleness checks are unaffected.
+ */
+function businessHoursElapsed(from, to) {
+  if (!from) return Infinity;
+  let cursor = new Date(from);
+  let hours = 0;
+  while (cursor < to) {
+    const nextMidnight = new Date(cursor);
+    nextMidnight.setHours(24, 0, 0, 0);
+    const segmentEnd = nextMidnight < to ? nextMidnight : to;
+    if (!isGraceDay(cursor)) hours += msToHours(segmentEnd - cursor);
+    cursor = segmentEnd;
+  }
+  return hours;
+}
+
 /**
  * Walk a directory tree (non-recursive by default) and return the most recent
  * mtime among files matching the optional extension list.
@@ -127,7 +155,8 @@ function runCheck(config) {
   // of the date itself.  Without this, a May 26 BusinessDate loaded at 1 AM on
   // May 27 would read as ~25h stale by evening even though it's the current day's data.
   const latestEndOfDay = latestDate ? new Date(latestDate.getTime() + 86_400_000) : null;
-  const hoursStale = latestEndOfDay ? msToHours(now - latestEndOfDay) : Infinity;
+  // Weekend/Monday gaps don't count toward staleness — see businessHoursElapsed.
+  const hoursStale = latestEndOfDay ? businessHoursElapsed(latestEndOfDay, now) : Infinity;
 
   // ── 2. Green — DB is current ──────────────────────────────────────────────
   if (!dbError && hoursStale <= config.greenThresholdHours) {
